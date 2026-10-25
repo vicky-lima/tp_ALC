@@ -280,3 +280,158 @@ def svd_reducida(A, k="max", tol = 1e-15):
         V, E, U = svd_reducida_aux(A_t, k, tol)
 
     return U, E, V
+
+#FACTORIZACION QR CON GS
+def QR_con_GS(A,tol=1e-12,retorna_nops=False):
+    """
+    A una matriz de n x n 
+    tol la tolerancia con la que se filtran elementos nulos en R
+    retorna_nops permite (opcionalmente) retornar el numero de operaciones realizado
+    retorna matrices Q y R calculadas con Gram Schmidt (y como tercer argumento opcional, el numero de operaciones).
+    Si la matriz A no es de n x n, debe retornar None
+    """
+    n, m = np.shape(A)
+    if n != m:
+        return False
+    else:
+        R = np.zeros(shape=(n,n))
+        q_columnas = []
+        A_traspuesta = trasponer(A) #la traspongo para que hacer A[n] me de la columna y no la fila
+        a1 = A_traspuesta[0]
+        q1 = a1/norma(a1,2)
+        q_columnas += [q1]
+        R[0,0] = norma(a1,2)
+        for i in range(n-1):
+            i += 1
+            ui = np.array(A_traspuesta[i])
+
+            for k in range(i):
+                qk = q_columnas[k]
+                rki = producto_interno(qk, ui)
+                R[k][i] = rki
+                ui = ui - rki * qk
+            #wi = ai - proyeccion(q1,ai)
+            #q1 = wi/m.norma(wi,2)
+        
+            R[i][i] = norma(ui,2)
+            qi = ui/norma(ui,2)
+            q_columnas += [qi]
+
+        Q = trasponer(q_columnas)
+        return Q, R
+
+# CALCULA LU
+
+def calculaLU(A):
+    nops = 0
+    if A is None:
+        return None, None, 0
+
+    A = np.array(A, dtype=float)
+    Ac = A.copy()
+    m,n = A.shape
+        
+    if m!=n:
+        return None, None, 0
+
+    
+    for j in range(n-1):
+        elem_diag = Ac[j][j]
+        if valorAbsoluto(elem_diag) < 1e-15:
+            return None, None, 0
+        else:
+            i = j+1
+            #nops += n-j-1
+            while(i != m):
+                multiplicador = Ac[i][j]/elem_diag
+                nops += 1
+                Ac[i][j] = multiplicador
+                #nops += 2*(n-j)
+
+                p = j + 1
+                while(p != n):
+                    Ac[i][p] = (Ac[i][p]) - (multiplicador * Ac[j][p])
+                    nops += 2
+                    p += 1
+                #Ac[i, j + 1:n] -= multiplicador * Ac[j, j + 1:n]
+
+                i += 1
+
+    L = np.eye(m)
+    U = np.zeros((m,n))
+    for i in range(m):
+        for j in range (n):
+            if i>j:
+                L[i][j] = Ac[i][j]
+            else:
+                U[i][j] = Ac[i,j]
+    return L, U, nops
+
+# PARA LA INVERSA NECESITAMOS RES_TRI
+
+def res_tri(L,b,inferior=True):
+    if L is None or b is None:
+        return None
+
+    n, m = np.shape(L)
+    x = np.zeros(n)
+
+    if inferior == True:
+        i = 0
+        while (i != n):
+            j = 0
+            sumat_variables_conocidas = 0
+            if L[i][i] == 0:
+                return None
+            while (j!=i):
+                elemento = L[i][j]
+                sumat_variables_conocidas += elemento * x[j]
+                j+=1
+
+            x[i] = (b[i] - sumat_variables_conocidas)/L[i][i]
+            i += 1
+    elif (inferior == False):
+        i = n-1
+        while (i >= 0):
+            j = n-1
+            sumat_variables_conocidas = 0
+            if L[i][i] == 0:
+                return None
+
+            while (j>i):
+                elemento = L[i][j]
+                sumat_variables_conocidas += elemento * x[j]
+                j-=1
+
+            x[i] = (b[i] - sumat_variables_conocidas)/L[i][i]
+            i -= 1
+
+    return x
+
+#INVERSA CON LU
+
+def inversa(A):
+    L,U, cant_op = calculaLU(A)
+    if (L is None):
+        return None
+    else:
+        n = A.shape[0]
+        inversa_sin_t = []
+
+        #Cada col j de A^-1 cumple A.(A^-1)j = ej
+        #Entonces resuelvo: L Yj = ej
+        for j in range(n):
+            ej = np.zeros(n)
+            ej[j] = 1
+            
+            columnaYj = res_tri(L,ej,inferior=True)
+            if columnaYj is None:
+                return None
+        
+            columnajInv = res_tri(U,columnaYj,inferior=False)
+            if columnajInv is None:
+                return None
+            inversa_sin_t.append(columnajInv)
+
+        inversa = np.array(trasponer(inversa_sin_t))
+        return inversa
