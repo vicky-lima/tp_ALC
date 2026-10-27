@@ -317,7 +317,8 @@ def QR_con_GS(A,tol=1e-12,retorna_nops=False):
             qi = ui/norma(ui,2)
             q_columnas += [qi]
 
-        Q = trasponer(q_columnas)
+        q_columnas_array = np.array(q_columnas)
+        Q = trasponer(q_columnas_array)
         return Q, R
 
 # CALCULA LU
@@ -433,5 +434,84 @@ def inversa(A):
                 return None
             inversa_sin_t.append(columnajInv)
 
-        inversa = np.array(trasponer(inversa_sin_t))
+        inversa_sin_t_array = np.array(inversa_sin_t)
+        inversa = np.array(trasponer(inversa_sin_t_array))
         return inversa
+
+# CALCULA LDV
+
+def calculaLDV(A):
+    L, U, cant_ops = calculaLU(A)
+    if (L is None):
+        return None
+    n, m = L.shape
+    #me copio D de U 
+    D = np.zeros((n,n))
+    for i in range(n):
+        for j in range(m):
+            if i == j:
+                if U[i][j] == 0:
+                    return None
+                D[i][j]= U[i][j]
+
+    V = multiplicar_matrices(inversa(D), U)
+    
+    return L, D, V
+
+
+# ES DEFINIDA POSITIVA
+
+def esSDP(A, atol=1e-8):
+    if A is None:
+        return False
+
+    A = np.array(A, dtype=float)
+    if A.ndim != 2 or A.shape[0] != A.shape[1]:
+        return False
+
+    resultado = calculaLDV(A)
+    if resultado is None:
+        return False
+
+    L, D, V = resultado
+    if not np.allclose(V, trasponer(L), atol=atol):
+        return False
+
+    n = A.shape[0]
+    for i in range(n):
+        if D[i][i] <= 1e-16:
+            return False
+
+    return True
+
+# ES SIMETRICA
+
+def esSimetrica(A):
+    return trasponer(A) == A
+
+# CHOLESKY
+
+def calculaCholesky(A,atol=1e-10):
+
+    n,m = A.shape
+    if not esSDP(A, atol) or not esSimetrica(A):
+        return None
+
+    L, U = calculaLU(A)
+    D = np.zeros(n,m)
+
+    for i in range(n):
+        D[i][i] = (U[i][i]**1/2)
+
+    L_t = trasponer(L)
+    L_cholesky_t = multiplicar_matrices(D, L_t)
+
+    L_cholesky = trasponer(L_cholesky_t)
+
+    return L_cholesky
+
+
+
+
+
+    
