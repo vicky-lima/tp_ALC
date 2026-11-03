@@ -119,6 +119,11 @@ def producto_externo(u, v):
             M[i][j] = u[i] * v[j]
     return M
 
+def producto_vectorial(a,b): #a x b para vectores de 3 componentes
+    return np.array([a[1]*b[2] - a[2]*b[1],
+                     a[2]*b[0] - a[0]*b[2],
+                     a[0]*b[1] - a[1]*b[0]])
+
 # 
 def fA(A, v):
    Av = calcularAx(A, v)
@@ -233,7 +238,7 @@ def svd_reducida_aux(A, k="max",  tol=1e-15):
     autovalores = []
     autovectores = []
     for i in range(m):
-        if D[i][i] > tol :
+        if valorAbsoluto(D[i][i]) > tol :
             autovalores += [D[i][i]]
             autovectores += [S_t[i]]
    
@@ -382,7 +387,7 @@ def res_tri(L,b,inferior=True):
         while (i != n):
             j = 0
             sumat_variables_conocidas = 0
-            if L[i][i] == 0:
+            if valorAbsoluto(L[i][i]) < 1e-10:
                 return None
             while (j!=i):
                 elemento = L[i][j]
