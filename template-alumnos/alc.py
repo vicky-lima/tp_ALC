@@ -263,8 +263,10 @@ def svd_reducida_aux(A, k="max",  tol=1e-15):
 
     V = trasponer(np.array(autovect_ordenados))   
     autoval_ordenados = np.array(autoval_ordenados)
-    E = autoval_ordenados ** (1/2)
     r = autoval_ordenados.size
+    E = np.zeros((r, r))
+    for i in range(r):
+        E[i][i] = autoval_ordenados[i] ** 0.5
 
     B = multiplicar_matrices(A, V)
     B_t = trasponer(B)
@@ -515,6 +517,20 @@ def calculaCholesky(A,atol=1e-10):
 
     return L_cholesky
 
+
+
+def pseudoinversa(A):
+    U, E, V = svd_reducida(A)
+    U_t = trasponer(U)
+    E_t = trasponer(E)
+    E_pseudoinv = E_t
+    i=0
+    while i < E.shape[0] and valorAbsoluto(E[i][i]) > 1e-15:
+        E_pseudoinv[i][i] = 1/E_pseudoinv[i][i]
+        i+= 1
+    aux = multiplicar_matrices(V, E_pseudoinv)
+    Res = multiplicar_matrices(aux,U_t)
+    return Res
 
 
 
