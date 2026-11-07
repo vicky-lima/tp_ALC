@@ -1,4 +1,8 @@
 import numpy as np
+import os
+############################################################################################
+# Funciones del módulo
+############################################################################################
 
 # FUNCIÓN TRASPONER 
 def trasponer(A):
@@ -375,7 +379,7 @@ def calculaLU(A):
                 U[i][j] = Ac[i,j]
     return L, U, nops
 
-# PARA LA INVERSA NECESITAMOS RES_TRI
+#RES_TRI
 
 def res_tri(L,b,inferior=True):
     if L is None or b is None:
@@ -493,8 +497,18 @@ def esSDP(A, atol=1e-8):
 
 # ES SIMETRICA
 
-def esSimetrica(A):
-    return trasponer(A) == A
+def esSimetrica(A, atol=1e-8):
+    A_t = trasponer(A)
+
+    if A.shape != A_t.shape:
+        return False
+
+    for i in range(A.shape[0]):
+        for j in range(A.shape[1]):
+            if valorAbsoluto(A_t[i][j] - A[i][j]) > atol:
+                return False
+
+    return True
 
 # CHOLESKY
 
@@ -504,11 +518,11 @@ def calculaCholesky(A,atol=1e-10):
     if not esSDP(A, atol) or not esSimetrica(A):
         return None
 
-    L, U = calculaLU(A)
-    D = np.zeros(n,m)
+    L, U, nops = calculaLU(A)
+    D = np.zeros((n,m))
 
     for i in range(n):
-        D[i][i] = (U[i][i]**1/2)
+        D[i][i] = (U[i][i]**0.5)
 
     L_t = trasponer(L)
     L_cholesky_t = multiplicar_matrices(D, L_t)
@@ -518,7 +532,7 @@ def calculaCholesky(A,atol=1e-10):
     return L_cholesky
 
 
-
+# PSEUDOINVERSA 
 def pseudoinversa(A):
     U, E, V = svd_reducida(A)
     U_t = trasponer(U)
@@ -533,6 +547,373 @@ def pseudoinversa(A):
     return Res
 
 
+######################################################################################################################################################################################################
+# Funciones de la consigna
+######################################################################################################################################################################################################
 
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#EJ 2
+
+# Resuelve una Q 
+def obtenerQ3d(imgPts, objPts): # asumiendo que recibimos dos arrays 
+    n = objPts.shape[0] # como sabemos el tipo de datos que nos pasan????
+    Q = np.zeros((2*n, 12))
+
+    for i in range(n): 
+        U= objPts[i][0]
+        V= objPts[i][1]
+        W= objPts[i][2]
+        u = imgPts[2*i]
+        v = imgPts[2*i +1]  
+
+        Q[2*i] = np.array([U, V, W, 1, 0, 0, 0, 0, -u*U, -u*V, -u*W, -u])
+        Q[2*i + 1] = np.array([0, 0, 0, 0, U, V, W, 1, -v*U, -v*V, -v*W, -v ])
+
+    return Q 
+
+# docstring 
+def resolverDLT3D(Q): 
+    U, E, V = svd_reducida(Q)
+    V_t = trasponer(V)
+    n = V_t.shape[0]
+    m = V_t[n-1]
+
+    M = m.reshape(3, 4)
+
+    return M 
+
+# Sesgo 1 es el 0, y sesgo 2 es alfa u = alfa v
+# res_tri resuelve Ax = b, Kt = m
+def devolverMatricesCalibracion3D(M, sesgo1=False, sesgo2=False):
+    KR = M[:,:3]
+    KR_inversa = inversa(KR)
+    
+    R_t, K_inversa = QR_con_GS(KR_inversa)
+    R = trasponer(R_t)
+    K = inversa(K_inversa)
+
+    if sesgo1 == True:
+        K[0][1] = 0
+
+    if sesgo2 == True:
+        K[1][1] = K[0][0] #nos quedamos con alfa 1
+
+    #Reescribimos R en el caso de que haya entrado a alguno de los if
+    R = multiplicar_matrices(K_inversa, KR)
+
+    columna_m = M[:,3]
+    t = res_tri(K,columna_m)
+
+    return R, t, K
+
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#EJ 3)
+
+def obtenerQ2d(imgPts, objPts): # asumiendo que recibimos dos arrays 
+    n = objPts.shape[0]
+    Q = np.zeros((2*n, 9))
+
+    for i in range(n): 
+        U= objPts[i][0]
+        V= objPts[i][1]
+        u = imgPts[i][0]
+        v = imgPts[i][1]  
+
+        Q[2*i] = np.array([U, V, 1, 0, 0, 0, -u*U, -u*V, -u])
+        Q[2*i + 1] = np.array([0, 0, 0, U, V, 1, -v*U, -v*V, -v ])
+
+    return Q 
+
+
+#docstring
+def obtener_H(Q):
+    U, E, V = svd_reducida(Q)
+    V_t = trasponer(V)
+    n = V_t.shape[0]
+    h = V_t[n-1]
+
+    H = h.reshape(3, 3)
+
+
+    return np.array(H) 
+
+
+#docstring
+def armarA(Hlst):
+    n = len(Hlst)
+    A = []
+
+    for h in Hlst:
+        vij_aux = []
+        for i, j in [(0,0),(0,1),(1,1)]:
+            vij = [h[0][i]*h[0][j],
+                   h[0][i]*h[1][j] + h[1][i]*h[0][j],
+                   h[1][i]*h[1][j],
+                   h[2][i]*h[0][j]+h[0][i]*h[2][j],
+                   h[2][i]*h[1][j]+ h[1][i]*h[2][j],
+                   h[2][i]*h[2][j]]
+
+            vij_aux += [vij]
+
+        vij_aux = np.array(vij_aux)
+        fila_1 = vij_aux[1]
+        fila_2 = vij_aux[0] - vij_aux[2]
+
+        A += [fila_1]
+        A += [fila_2]
+
+    A = np.array(A)
+    
+    return A
+
+def obtener_B(A, sesgo1 = False): 
+    #resolvemos Ab = 0 con ||b|| = 1: b es el vector sing de menor valor singular de A.
+    if sesgo1 == True:
+        A_utilizada = np.hstack((A[:, 0:1], A[:, 2:6]))
+    else:
+        A_utilizada = A  
+
+    n_cols = A_utilizada.shape[1]
+
+    escala = np.zeros(n_cols)
+    for c in range(n_cols): #normlizamos columnas A
+        escala[c] = norma(A_utilizada[:, c],2)
+
+    A_esc = A_utilizada / escala
+
+    U,E,V = svd_reducida(A_esc)
+    V_t = trasponer(V)
+    n = V_t.shape[0]
+    
+    #ponemos a b con norma = 1
+    b_esc = V_t[n-1]
+
+    b = b_esc / escala
+
+    if sesgo1 == True:
+        b = np.array([b[0], 0, b[1], b[2], b[3], b[4]])
 
     
+    B = [[b[0], b[1], b[3]],
+         [b[1], b[2], b[4]],
+         [b[3], b[4], b[5]]]
+
+    B = np.array(B)
+
+    if B[0][0] < 0:
+        B = -B
+    
+    return B
+
+def calcularMatrizK2D(A):
+    B = obtener_B(A, sesgo1=True)
+    K_inversa_t = calculaCholesky(B)
+    K = trasponer(inversa(K_inversa_t))
+    K = K/K[2][2]
+
+    return K
+
+def obtenerPose2D(Hj, K):
+    K_inversa = inversa(K)
+    c1 = Hj[:,0]
+    c2 = Hj[:,1]
+    c3 = Hj[:,2]
+
+    K_inv_c1 = calcularAx(K_inversa,c1)
+    K_inv_c2 = calcularAx(K_inversa,c2)
+    K_inv_c3 = calcularAx(K_inversa, c3)
+
+    lamb = 1/norma(K_inv_c1,2)
+
+    r1 = lamb * K_inv_c1
+    r2 = lamb * K_inv_c2
+    r3 = producto_vectorial(r1, r2)
+
+    R_traspuesta = np.array([r1,r2,r3])
+    R = trasponer(R_traspuesta)
+
+    t = lamb * K_inv_c3
+
+    return R, t
+
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#EJ 4)
+
+def circulo_de_obj_a_img(H, centro, radio=1.0,n=100):
+    theta = np.arange(n+1)*2*np.pi/n
+    a = centro[0] + radio*np.cos(theta)
+    b = centro[1] + radio*np.sin(theta)
+
+    puntos = np.vstack([a,b,np.ones(n+1)])
+    X = []
+    for punto in trasponer(puntos):
+        X_aux = calcularAx(H, punto) #pasamos de la realidad a la img
+        X += [[X_aux[0]/X_aux[2],X_aux[1]/X_aux[2]]]
+    
+    X = np.array(X)
+
+    return X
+
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# EJ 5) 
+def normalizarPuntos(P):
+    centroide = np.mean(P, axis=0)
+    diferencia = P - centroide
+    dist_media = np.mean(np.sqrt(np.sum(diferencia * diferencia, axis=1)))
+    s = np.sqrt(2) / dist_media
+
+    return np.array([[s, 0, -s * centroide[0]], [0, s, -s * centroide[1]], [0, 0, 1.0]])
+
+def aplicarT(T, P):
+    P_n = np.zeros((P.shape[0], 2))
+    for i in range(P.shape[0]):
+        p = calcularAx(T, np.array([P[i][0], P[i][1], 1.0]))
+        P_n[i][0] = p[0]
+        P_n[i][1] = p[1]
+
+    return P_n
+
+def obtener_H_normalizada(imgPts, objPts):
+    T_img = normalizarPuntos(imgPts)
+    T_obj = normalizarPuntos(objPts)
+    H_n = obtener_H(obtenerQ2d(aplicarT(T_img, imgPts), aplicarT(T_obj, objPts)))
+    H = multiplicar_matrices(inversa(T_img,), multiplicar_matrices(H_n, T_obj))
+
+    return H / H[2][2]
+
+def calcular_f(A, u0, v0):
+    a0 = A[:, 5]
+    a1 = A[:, 0] + A[:, 2] - u0 * A[:, 3] - v0 * A[:, 4] + (u0**2 + v0**2) * A[:, 5]
+    x = -np.sum(a0 * a1) / np.sum(a1 * a1)
+    if x <= 0:
+        return None
+    return 1 / np.sqrt(x)
+
+
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# EJ 6)
+
+def calculoLambdaMu(I0,J0): 
+    p = -np.sum(I0*J0)
+    d = np.sum(J0*J0) - np.sum(I0*I0)
+    s = (d+ np.sqrt(d**2+4*p**2))/2
+    lamb = np.sqrt(s)
+    if lamb > 1e-15:
+        mu = p/lamb
+    else:
+        mu = np.sqrt(valorAbsoluto(d))
+    return lamb, mu
+
+#Cuando decimos fx, es porque nos referimos al parametro horizontal de f, K[0][0]
+def calcularSalidaPOSIT(Is, Js, fx, m0, M0):
+
+    Z0 = fx / norma(Is,2)
+    i = Is / norma(Is, 2)
+    j = Js / norma(Js, 2)
+    k = producto_vectorial(i, j)
+    R = np.vstack([i,j,k])
+    t = np.array([(Z0/fx)*m0[0], (Z0/fx)*m0[1], Z0])
+
+    return i, j, k, Z0, R, t
+
+def evaluarPose(R, t, obj_vecs, img_vecs, K):
+
+    R_traspuesta = trasponer(R)
+    pose = multiplicar_matrices(obj_vecs, R_traspuesta) + t
+    X = pose[:,0]
+    Y = pose[:,1]
+    Z = pose[:,2]
+
+    cantidad_factibles = 0
+    img_vecs_factibles = []
+    u_reproyectado = []
+    v_reproyectado = []
+
+    for i in range(Z.shape[0]):
+        if Z[i] > 0:
+            cantidad_factibles +=1
+    
+            u_reproyectado += [(K[0][0]*X[i] / Z[i]) + K[0][2]]
+            v_reproyectado += [(K[1][1]*Y[i] / Z[i]) + K[1][2]]
+
+            img_vecs_factibles += [img_vecs[i]]
+
+    distancia = 0
+    for i in range(cantidad_factibles):
+        diferencia_u = (u_reproyectado[i]-img_vecs_factibles[i][0])**2
+        diferencia_v = (v_reproyectado[i]-img_vecs_factibles[i][1])**2
+
+        diferencia = diferencia_u + diferencia_v
+        distancia += diferencia
+
+    RMS = np.sqrt((1/cantidad_factibles)*distancia)
+
+    return cantidad_factibles, RMS
+
+def aplicarPOSIT(obj_vecs, img_vecs, K, MaxIt, atol):
+
+    x = img_vecs[:,0] - K[0][2]
+    y = img_vecs[:,1] - K[1][2]
+    x0 = x[0]
+    y0 = y[0]
+    fx = K[0][0]
+
+    a = obj_vecs - obj_vecs[0]
+    a_sin_M0 = a[1:] 
+
+    #La matriz del sistema lineal, son las mismas filas que a_sin_M0 pero solo las columnas U y V
+    A = a_sin_M0[:, :2]             
+    A_pseudoinv = pseudoinversa(A)
+
+    eps = np.zeros(a_sin_M0.shape[0]) #proyeccion ortografica escalada 
+
+    mejor_R = None
+    mejor_t = None
+    rms_anterior = np.inf
+
+    for iteracion in range(MaxIt):
+
+        #Resolvemos el sistema lineal
+        b_u = x[1:]*(1+eps) - x0
+        b_v = y[1:]*(1+eps) - y0
+
+        I0 = calcularAx(A_pseudoinv, b_u)
+        J0 = calcularAx(A_pseudoinv, b_v)
+
+        #Buscamos lambda y mu
+        lamb, mu = calculoLambdaMu(I0, J0)
+
+        #Probamos con las dos poses con los dos signos de lambda y mu 
+        mejor_pose = None
+        mejor_rms = np.inf
+
+        for signo in (+1,-1):
+            Is = np.array([I0[0], I0[1], signo*lamb])
+            Js = np.array([J0[0], J0[1], signo*mu])
+            pose = calcularSalidaPOSIT(Is, Js, fx, (x0,y0), None)
+
+            R = pose[4]
+            t = pose[5]
+            cant_validos, rms = evaluarPose(R, t, a, img_vecs, K)
+
+            if cant_validos == a.shape[0] and rms < mejor_rms:
+                mejor_pose = pose
+                mejor_rms = rms
+             
+        
+        i, j, k, Z0, mejor_R, mejor_t = mejor_pose
+
+
+        #Convergencia: si el RMS casi no cambio entonces devolvemos la ultima pose
+        if valorAbsoluto(rms_anterior - mejor_rms) < atol:
+            return mejor_R, mejor_t
+        
+        #Recalculamos eps
+        eps = calcularAx(a_sin_M0, k) / Z0
+
+        
+        rms_anterior = mejor_rms
+
+    return mejor_R, mejor_t
+
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
