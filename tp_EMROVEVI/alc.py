@@ -6,6 +6,7 @@ import os
 
 # FUNCIÓN TRASPONER 
 def trasponer(A):
+    """Devuelve la traspuesta de A."""
     m = A.shape[0]
     n = A.shape[1]
     traspuesta = []
@@ -19,13 +20,14 @@ def trasponer(A):
 
 # FUNCIÓN QUE CALCULA EL VALOR ABSOLUTO 
 def valorAbsoluto(n):
+    """Devuelve |n| para un escalar n."""
     if n<0:
         return n*(-1)
     return n
 
 # FUNCIÓN QUE MULTIPLICA DOS MATRICES 
 def multiplicar_matrices(A, B):
-
+    """Producto de matrices A (m x p) por B (p x n). Devuelve A.B (m x n).""" 
     res = []
     for filaA in A:
         f = []
@@ -555,8 +557,11 @@ def pseudoinversa(A):
 #EJ 2
 
 # Resuelve una Q 
-def obtenerQ3d(imgPts, objPts): # asumiendo que recibimos dos arrays 
-    n = objPts.shape[0] # como sabemos el tipo de datos que nos pasan????
+def obtenerQ3d(imgPts, objPts): 
+    """Arma la matriz Q (ec. 6) del DLT 3D.
+        Recibe: imgPts (2n,) con u,v intercalados y objPts (n,3) con U,V,W.
+        Devuelve: Q de 2n x 12.""" 
+    n = objPts.shape[0] 
     Q = np.zeros((2*n, 12))
 
     for i in range(n): 
@@ -572,7 +577,10 @@ def obtenerQ3d(imgPts, objPts): # asumiendo que recibimos dos arrays
     return Q 
 
 # docstring 
-def resolverDLT3D(Q): 
+def resolverDLT3D(Q):
+    """Resuelve Q.m = 0 con ||m|| = 1 (ej. 1 b).
+        Recibe: Q de 2n x 12.
+        Devuelve: M de 3x4, armada con el vector singular de menor valor singular.""" 
     U, E, V = svd_reducida(Q)
     V_t = trasponer(V)
     n = V_t.shape[0]
@@ -585,6 +593,9 @@ def resolverDLT3D(Q):
 # Sesgo 1 es el 0, y sesgo 2 es alfa u = alfa v
 # res_tri resuelve Ax = b, Kt = m
 def devolverMatricesCalibracion3D(M, sesgo1=False, sesgo2=False):
+    """Descompone M = K[R|t] usando QR de (KR)^-1.
+        Recibe: M (3x4); sesgo1=True fuerza K[0][1]=0; sesgo2=True fuerza alfa_v = alfa_u.
+        Devuelve: R, t, K."""
     KR = M[:,:3]
     KR_inversa = inversa(KR)
     
@@ -610,6 +621,9 @@ def devolverMatricesCalibracion3D(M, sesgo1=False, sesgo2=False):
 #EJ 3)
 
 def obtenerQ2d(imgPts, objPts): # asumiendo que recibimos dos arrays 
+    """Arma la matriz Q (2n x 9) para calcular la homografia H.
+        Recibe: imgPts (n,2) y objPts (n,2) con U,V del plano.
+        Devuelve: Q."""
     n = objPts.shape[0]
     Q = np.zeros((2*n, 9))
 
@@ -627,6 +641,9 @@ def obtenerQ2d(imgPts, objPts): # asumiendo que recibimos dos arrays
 
 #docstring
 def obtener_H(Q):
+    """Resuelve Q.h = 0 con ||h|| = 1.
+        Recibe: Q de 2n x 9.
+        Devuelve: H de 3x3 (definida a menos de escala)."""
     U, E, V = svd_reducida(Q)
     V_t = trasponer(V)
     n = V_t.shape[0]
@@ -640,6 +657,9 @@ def obtener_H(Q):
 
 #docstring
 def armarA(Hlst):
+    """Arma el sistema A.b = 0 de Zhang (dos filas por homografia).
+        Recibe: lista de homografias Hlst.
+        Devuelve: A de 2m x 6."""
     n = len(Hlst)
     A = []
 
