@@ -1,0 +1,33 @@
+CORRECCIONES TP
+Ejercicio 1:
+- LISTO Cuales son las dependencias que aparecerian si todos los puntos fueran coplanares? Demostrar como hace que el nucleo tenga dimension 3
+
+Ejercicio 2:
+- LISTO Recuerden que tienen que verificar el determinante de R y el último valor de K debe ser 1. factor de escala.
+- LISTO No hace falta reescribir R luego de modificar, si lo hacen tienen que estar seguros que R sigue siendo una rotacion.
+- LISTO Agreguen en el notebook un gráfico con los puntos marcados en la imagen y su reproyeccion para validar sus resultados
+- LISTO Expliquen dentro del notebook como funciona la factorizacion RQ que estan usando
+- Mostrar la varianza de K a lo largo de las distintas fotos, deberia variar muy poco, hagan un gráfico boxplot.
+
+Ejercicio 3:
+- Agreguen un gráfico con los puntos marcados en la imagen y su reproyeccion luego de haber calculado K y R, t para alguna vista.
+- Faltaria hacer que r2 sea ortogonal a r1 en obtenerPose2D, de otra manera no es una rotacion valida.
+
+Ejercicio 4:
+- LISTO En Enzo, explicar porque utilizaron estos puntos. ¿Qué caracteristicas cumplen?
+- LISTO En el b hagan un análisis de cuáles jugadores están o no en offside, no solo muestren la línea. Ojo con los puntos que utilizen, recuerden que tienen que ser coplanares
+
+
+Ejercicio 5:
+- LISTO Desarrollen en el notebook el sistema de ecuaciones que se esta resolviendo en calcular_f y su sustento teorico.
+- LISTO Falta poner la K que quedaba mal 
+
+Ejercicio 6:
+- Incompleto, ustedes ya conocen el R y t de la cámara actual del dron, es decir, donde está apuntando y donde está ubicado en el espacio. 
+Con estas dos cosas pueden calcular el movimiento relativo a su nueva pose objetivo.
+Piensen como deberia verse R y t cuando estamos viendo correctamente a H. 
+Si la cámara del dron realiza la siguiente transformacion sobre un punto x_w del sistemas de coordenadas del mundo:
+ x_a = R_a * x_w + t_a, 
+ ustedes buscan encontrar un dR y dt tal que: x_o = dR * x_a + dt, 
+ donde x_o = R_o * x_w + t_o y R_o, t_o son su pose objetivo. 
+Estos dR y dt los utilizaria el controlador para mover al dron.

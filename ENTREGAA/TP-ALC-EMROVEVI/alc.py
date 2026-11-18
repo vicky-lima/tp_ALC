@@ -609,11 +609,9 @@ def devolverMatricesCalibracion3D(M, sesgo1=False, sesgo2=False):
     if sesgo2 == True:
         K[1][1] = K[0][0] #nos quedamos con alfa 1
 
-    #Reescribimos R en el caso de que haya entrado a alguno de los if
-    R = multiplicar_matrices(K_inversa, KR)
+    # R no se modifica, así sigue siendo ortonormal
 
-    columna_m = M[:,3]
-    t = res_tri(K,columna_m)
+    t = res_tri(K,M[:,3], inferior=False)
 
     return R, t, K
 
