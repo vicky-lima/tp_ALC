@@ -745,12 +745,20 @@ def obtenerPose2D(Hj, K):
 
     r1 = lamb * K_inv_c1
     r2 = lamb * K_inv_c2
+
+    r1 = r1/ norma(r1, 2)
+
+    r2 = r2 - np.sum(r1*r2)*r1
+    r2 = r2/ norma(r2, 2)
+
     r3 = producto_vectorial(r1, r2)
+
+    t = lamb * K_inv_c3
+
 
     R_traspuesta = np.array([r1,r2,r3])
     R = trasponer(R_traspuesta)
 
-    t = lamb * K_inv_c3
 
     return R, t
 
